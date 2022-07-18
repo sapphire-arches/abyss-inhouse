@@ -7,7 +7,7 @@ from database import Database
 from kafka import Kafka
 
 # Deploy a kafka cluster
-kafka = Kafka("abyss-kafka")
+kafka = Kafka("kafka")
 
 # Create a topic on the Kafka cluster
 # topic = kafka.Topic(
@@ -17,7 +17,7 @@ kafka = Kafka("abyss-kafka")
 #     Frontend service
 
 # Primary database
-database = Database("abyss-db")
+database = Database("db")
 
 # Frontend
 import frontend

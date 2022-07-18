@@ -1,7 +1,11 @@
 #
 # Deploys the required postgresql database
 #
+import pulumi
 from pulumi import ResourceOptions, ComponentResource, Output
+from pulumi_kubernetes.core.v1 import (
+    Secret,
+)
 from pulumi_kubernetes.helm.v3 import (
     Chart,
     ChartOpts,
@@ -10,9 +14,10 @@ from pulumi_kubernetes.helm.v3 import (
 from storage import StorageSlice
 
 class Database(ComponentResource):
+    postgres_password: Output[str]
+
     def __init__(self, name: str, opts: ResourceOptions =  None):
-        super().__init__('abyss:component:Kafka', name, {}, opts)
-        name = "abyss-postgresql"
+        super().__init__('abyss:component:Database', name, {}, opts)
         size = "10Gi"
 
         slice = StorageSlice(
@@ -23,7 +28,7 @@ class Database(ComponentResource):
 
         # The actual postgresql server
         chart = Chart(
-            "abyss-pg",
+            name,
             ChartOpts(
                 chart="postgresql",
                 version="11.6.16",
@@ -45,4 +50,11 @@ class Database(ComponentResource):
                 ]
             ))
 
-        self.register_outputs({})
+        secret_name = "v1/Secret:default/" + name + "-postgresql"
+        secret = chart.resources[secret_name]
+
+        self.postgres_password = secret.data['postgres-password'];
+
+        self.register_outputs({
+            'postgress_password': self.postgres_password
+        })
