@@ -1,0 +1,6 @@
+name: abyss-inhouse
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: Delpoyment infrastructure for the abyss inhouse website
