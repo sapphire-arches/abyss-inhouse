@@ -3,12 +3,13 @@
 import pulumi
 import pulumi_kafka
 from config import is_minikube
+from database import Database
+from kafka import Kafka
 
 # Deploy a kafka cluster
+kafka = Kafka("abyss-kafka")
 
 # Create a topic on the Kafka cluster
-import kafka
-kafka = kafka.build()
 # topic = kafka.Topic(
 #     "steam-jobs",
 #     partitions=1,
@@ -16,8 +17,7 @@ kafka = kafka.build()
 #     Frontend service
 
 # Primary database
-import database
-database = database.build()
+database = Database("abyss-db")
 
 # Frontend
 import frontend

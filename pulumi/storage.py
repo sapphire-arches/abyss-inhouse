@@ -29,7 +29,7 @@ def get_local_path(name):
 
     return str(database_path)
 
-def make_volume(name: str, size: str, class_name: str):
+def make_volume(name: str, size: str, class_name: str, opts: ResourceOptions):
     labels = {"app": name}
     metadata = ObjectMetaArgs(labels=labels)
 
@@ -61,8 +61,8 @@ def make_volume(name: str, size: str, class_name: str):
                         "match_fields": [],
                     }],
                 },
-            })
-        )
+            }),
+        opts=opts)
 
 class StorageSlice(ComponentResource):
     volume: PersistentVolume
@@ -70,12 +70,13 @@ class StorageSlice(ComponentResource):
 
     def __init__(self, name: str, size: str, class_name: str,
                  opts: ResourceOptions = None):
-        super().__init__('k8sx:component:StorageSlice', name, {}, opts)
+        super().__init__('abyss:component:StorageSlice', name, {}, opts)
 
         labels = {"app": name}
         metadata = ObjectMetaArgs(labels=labels)
         # TODO: this is dev-only for now
-        self.volume = make_volume(name, size, class_name)
+        self.volume = make_volume(name, size, class_name,
+                ResourceOptions(parent=self))
 
         self.claim = PersistentVolumeClaim(
             name,
@@ -89,6 +90,12 @@ class StorageSlice(ComponentResource):
                     }
                 },
                 volume_name = self.volume.id,
+            ),
+            opts=ResourceOptions(
+                parent=self,
+                depends_on=[
+                    self.volume
+                ]
             ))
 
         self.register_outputs({})
