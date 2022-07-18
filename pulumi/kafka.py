@@ -2,13 +2,12 @@
 # Deploys the required Kafka services
 #
 
-from storage import StorageSlice
 import pulumi
+
+from storage import StorageSlice
 from pulumi import ResourceOptions, ComponentResource, Output
 from pulumi_kafka import Provider
-from pulumi_kubernetes.core.v1 import (
-    Service,
-)
+from pulumi_kubernetes.core.v1 import Service
 from pulumi_kubernetes.helm.v3 import (
     Chart,
     ChartOpts,
@@ -50,6 +49,12 @@ class Kafka(ComponentResource):
                     repo="https://charts.bitnami.com/bitnami",
                 ),
                 values={
+                    # Required so Pulumi can manage topics
+                    "deleteTopicEnable": True,
+                    # Explicitly call out the use of the plaintext protocol
+                    "auth": {
+                        "clientProtocol": "plaintext",
+                    },
                     "persistence": {
                         "existingClaim": kafka_slice.helm_claim(),
                     },
@@ -72,9 +77,8 @@ class Kafka(ComponentResource):
 
         service_name = "v1/Service:default/" + name
 
-        chart.resources[service_name].apply(lambda x: print(x))
-
         kafka_spec = chart.resources[service_name].spec
+        state = chart.resources["apps/v1/StatefulSet:default/" + name]
 
         def mk_ips(ips, ports):
             for port in ports:
@@ -88,18 +92,25 @@ class Kafka(ComponentResource):
 
             return list(map(lambda i: f"{i}:{port}", ips))
 
-        bootstrap_servers = Output.all(kafka_spec.cluster_ips, kafka_spec.ports) \
+        # Include state.status to block creating the provider until Kafka is actually running
+        bootstrap_servers = Output.all(kafka_spec.cluster_ips, kafka_spec.ports, state.status) \
             .apply(lambda args: mk_ips(args[0], args[1]))
+
+        pulumi.export("kafka-bootstrap-servers", bootstrap_servers)
 
         self.provider = Provider(name,
             bootstrap_servers=bootstrap_servers,
+            # Explicitly disable TLS, it is enabled by default and Kafka gets
+            # very sad with the bytes it recieves in that case.
+            tls_enabled=False,
             opts=ResourceOptions(
                 parent=self,
-                depends_on=[chart]
+                depends_on=[chart.resources[service_name]]
             ))
 
-        pulumi.export("kafka-ips", bootstrap_servers)
-
+        # N.B. for the provider to actually work, you need to make sure
+        # "cluster.local" resolution works i.e. service/kube-dns has its
+        # clusterip in the system's resolver list.
         self.register_outputs({
             "provider": self.provider
         })

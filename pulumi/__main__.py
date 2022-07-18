@@ -5,16 +5,28 @@ import pulumi_kafka
 from config import is_minikube
 from database import Database
 from kafka import Kafka
+from pulumi import ResourceOptions
+from pulumi_kafka import Topic
 
 # Deploy a kafka cluster
 kafka = Kafka("kafka")
 
 # Create a topic on the Kafka cluster
-# topic = kafka.Topic(
-#     "steam-jobs",
-#     partitions=1,
-#     replication_factor=1,
-#     Frontend service
+topic_options = ResourceOptions(
+    provider=kafka.provider,
+    parent=kafka,)
+
+topic = Topic(
+    "steam-jobs",
+    partitions=5,
+    replication_factor=1,
+    config={
+        "cleanup.policy": "compact",
+        "segment.ms": "20000",
+    },
+    opts=topic_options)
+
+pulumi.export('topic.steam-jobs', topic.id)
 
 # Primary database
 database = Database("db")
