@@ -27,7 +27,10 @@ class Database(ComponentResource):
             class_name="abyss-pgsql",
             opts=ResourceOptions(parent=self))
 
-        self.postgres_password = RandomPassword(name, length=16)
+        self.postgres_password = RandomPassword(
+            name,
+            length=16,
+            opts=ResourceOptions(parent=self))
 
         secret = Secret(
             name,
@@ -38,7 +41,6 @@ class Database(ComponentResource):
             )
 
         # The actual postgresql server
-        # TODO: feed the chart a secret we generate to get better integration
         chart = Chart(
             name,
             ChartOpts(
@@ -54,7 +56,7 @@ class Database(ComponentResource):
                         }
                     },
                     "auth": {
-                        "existingSecret": secret.id,
+                        "existingSecret": secret.id.apply(lambda id: id[id.find('/')+1:]),
                     }
                 }
             ),
