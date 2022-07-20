@@ -16,23 +16,6 @@ from pulumi_kubernetes.helm.v3 import (
 )
 from ingress import Ingress
 
-def remove_status(obj, opts):
-    """ Stupid hack transformer to deal with jaeger operator trying to set
-    status """
-    if obj["kind"] == "CustomResourceDefinition":
-        del obj["status"]
-
-# Make every service private to the cluster, i.e., turn all services into ClusterIP instead of LoadBalancer.
-def make_service_private(obj, opts):
-    if obj["kind"] == "Service" and obj["apiVersion"] == "v1":
-        try:
-            t = obj["spec"]["type"]
-            if t == "LoadBalancer":
-                pulumi.info(f'Replacing LB with CIP')
-                obj["spec"]["type"] = "ClusterIP"
-        except KeyError:
-            pass
-
 class JaegerDeployment(ComponentResource):
     def __init__(self, certmanager: CertManager, opts: ResourceOptions = None):
         super().__init__('abyss:component:Jaeger', 'jaeger', {}, opts)
@@ -47,7 +30,7 @@ class JaegerDeployment(ComponentResource):
         chart = Chart(
             'jaeger',
             ChartOpts(
-                namespace=namespace.id,
+                # namespace=namespace.id,
                 chart='jaeger',
                 version='0.57.1',
                 fetch_opts=FetchOpts(
@@ -61,19 +44,30 @@ class JaegerDeployment(ComponentResource):
                         'kafka': False,
                     },
                     'storage': {
-                        'type': 'none',
+                        'type': 'memory',
                     },
                     'allInOne': {
+                        'enabled': False,
+                    },
+                    'agent':{
+                        'enabled': True,
+                    },
+                    'collector': {
                         'enabled': True,
                         'ingress': {
                             'enabled': False,
                         },
                     },
-                    'agent':{ 'enabled': False },
-                    'collector': { 'enabled': False },
-                    'query': { 'enabled': False },
+                    'query': {
+                        'enabled': True,
+                        'ingress': {
+                            'enabled': False,
+                            'hosts': [
+                                'jaeger.cluster.local',
+                            ],
+                        },
+                    },
                 },
-                transformations=[make_service_private],
             ),
             opts=ResourceOptions(
                 parent=self,
@@ -81,19 +75,4 @@ class JaegerDeployment(ComponentResource):
                     namespace,
                 ]
             ),
-            )
-
-        ## def replace_namespace(obj, opts):
-        ##     if "namespace" in obj["metadata"]:
-        ##         obj["metadata"]["namespace"] = namespace.id
-
-        ## jaeger = ConfigFile(
-        ##     "jaeger",
-        ##     "./operators/jaeger-operator.yaml",
-        ##     transformations=[remove_status,replace_namespace],
-        ##     opts=ResourceOptions(
-        ##         parent=self,
-        ##         depends_on=[namespace, certmanager],
-        ##     )
-        ## )
-
+        )
