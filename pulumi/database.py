@@ -3,6 +3,7 @@
 #
 import pulumi
 from pulumi import ResourceOptions, ComponentResource, Output
+from pulumi_random import RandomPassword
 from pulumi_kubernetes.core.v1 import (
     Secret,
 )
@@ -26,7 +27,18 @@ class Database(ComponentResource):
             class_name="abyss-pgsql",
             opts=ResourceOptions(parent=self))
 
+        self.postgres_password = RandomPassword(name, length=16)
+
+        secret = Secret(
+            name,
+            data={
+                'postgres-password': self.postgres_password,
+            },
+            opts=ResourceOptions(parent=self),
+            )
+
         # The actual postgresql server
+        # TODO: feed the chart a secret we generate to get better integration
         chart = Chart(
             name,
             ChartOpts(
@@ -40,6 +52,9 @@ class Database(ComponentResource):
                         "persistence": {
                             "existingClaim": slice.helm_claim(),
                         }
+                    },
+                    "auth": {
+                        "existingSecret": secret.id,
                     }
                 }
             ),
@@ -49,11 +64,6 @@ class Database(ComponentResource):
                     slice
                 ]
             ))
-
-        secret_name = "v1/Secret:default/" + name + "-postgresql"
-        secret = chart.resources[secret_name]
-
-        self.postgres_password = secret.data['postgres-password'];
 
         self.register_outputs({
             'postgress_password': self.postgres_password
