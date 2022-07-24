@@ -21,7 +21,9 @@
           ];
         };
         python-pkg = pkgs.python310.withPackages (pythonPackages: with pythonPackages; [
-          pulumi
+          isort
+          mypy
+          yapf
         ]);
       in
       {

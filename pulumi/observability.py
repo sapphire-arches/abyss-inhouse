@@ -3,27 +3,29 @@
 #
 
 import pulumi
-from pulumi import ResourceOptions, ComponentResource, Output
-from pulumi_kubernetes.core.v1 import (
-    Namespace,
-)
+from pulumi import ComponentResource
+from pulumi import Output
+from pulumi import ResourceOptions
+from pulumi_kubernetes.core.v1 import Namespace
+from pulumi_kubernetes.helm.v3 import Chart
+from pulumi_kubernetes.helm.v3 import ChartOpts
+from pulumi_kubernetes.helm.v3 import FetchOpts
 from pulumi_kubernetes.yaml import ConfigFile
 from pulumi_kubernetes_cert_manager import CertManager
-from pulumi_kubernetes.helm.v3 import (
-    Chart,
-    ChartOpts,
-    FetchOpts,
-)
+
 from ingress import Ingress
 
+
 class JaegerDeployment(ComponentResource):
+
     def __init__(self, certmanager: CertManager, opts: ResourceOptions = None):
         super().__init__('abyss:component:Jaeger', 'jaeger', {}, opts)
 
         # Jaeger operator defaults to the "observability" namespace, so make
         # sure it exists.
 
-        namespace = Namespace("observability", opts=ResourceOptions(parent=self))
+        namespace = Namespace("observability",
+                              opts=ResourceOptions(parent=self))
 
         pulumi.export('obs-ns', namespace.id)
 
@@ -34,8 +36,7 @@ class JaegerDeployment(ComponentResource):
                 chart='jaeger',
                 version='0.57.1',
                 fetch_opts=FetchOpts(
-                    repo='https://jaegertracing.github.io/helm-charts'
-                ),
+                    repo='https://jaegertracing.github.io/helm-charts'),
                 # TODO: have a non-dev config
                 values={
                     'provisionDataStore': {
@@ -49,7 +50,7 @@ class JaegerDeployment(ComponentResource):
                     'allInOne': {
                         'enabled': False,
                     },
-                    'agent':{
+                    'agent': {
                         'enabled': True,
                     },
                     'collector': {
@@ -72,12 +73,9 @@ class JaegerDeployment(ComponentResource):
                     },
                 },
             ),
-            opts=ResourceOptions(
-                parent=self,
-                depends_on=[
-                    namespace,
-                ]
-            ),
+            opts=ResourceOptions(parent=self, depends_on=[
+                namespace,
+            ]),
         )
 
         query_svc = chart.get_resource('v1/Service', 'jaeger-query')

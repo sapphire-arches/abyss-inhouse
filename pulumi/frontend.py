@@ -2,20 +2,22 @@
 # Specification of frontend resources
 #
 import pulumi
-from service_deployment import ServiceDeployment
-from config import is_minikube
 from pulumi_kubernetes.networking.v1 import Ingress
 
-def build(replicas=1):
-    deployment = ServiceDeployment(
-        "frontend",
-        image="nginx",
-        replicas=replicas,
-        ports=[80],
-        allocate_ip_address=True,
-        is_minikube=is_minikube)
+from config import is_minikube
+from service_deployment import ServiceDeployment
 
-    Ingress('frontend',
+
+def build(replicas=1):
+    deployment = ServiceDeployment("frontend",
+                                   image="nginx",
+                                   replicas=replicas,
+                                   ports=[80],
+                                   allocate_ip_address=True,
+                                   is_minikube=is_minikube)
+
+    Ingress(
+        'frontend',
         metadata={
             'annotations': {
                 'kubernetes.io/ingress.class': 'nginx',
@@ -32,7 +34,9 @@ def build(replicas=1):
                             'backend': {
                                 'service': {
                                     'name': 'frontend',
-                                    'port': { 'number': 80 },
+                                    'port': {
+                                        'number': 80
+                                    },
                                 },
                             },
                         }],
@@ -40,6 +44,6 @@ def build(replicas=1):
                 },
             ],
         },
-        )
+    )
 
     return deployment

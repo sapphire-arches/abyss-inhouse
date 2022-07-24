@@ -4,6 +4,7 @@ def remove_status(obj, opts):
     if obj["kind"] == "CustomResourceDefinition":
         del obj["status"]
 
+
 def make_service_private(obj, opts):
     """ Make every service private to the cluster, i.e., turn all services into
     ClusterIP instead of LoadBalancer. """
@@ -15,4 +16,3 @@ def make_service_private(obj, opts):
                 obj["spec"]["type"] = "ClusterIP"
         except KeyError:
             pass
-
