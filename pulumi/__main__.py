@@ -15,7 +15,7 @@ from observability import JaegerDeployment
 # Make sure we can see what's happening
 ingress = Ingress()
 certmanager = CertManager('cert-manager', install_crds=True)
-JaegerDeployment(certmanager)
+JaegerDeployment(certmanager, ingress)
 
 # Deploy a kafka cluster
 kafka = Kafka("kafka")
@@ -43,6 +43,6 @@ database = Database("db")
 # Frontend
 import frontend
 
-frontend = frontend.build()
+_frontend = frontend.build()
 
-pulumi.export("ip", frontend.ip_address)
+pulumi.export("ip", _frontend.ip_address)

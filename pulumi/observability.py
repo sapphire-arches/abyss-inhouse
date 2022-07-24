@@ -14,20 +14,25 @@ from pulumi_kubernetes.yaml import ConfigFile
 from pulumi_kubernetes_cert_manager import CertManager
 
 from ingress import Ingress
+from storage import make_volume
 
 
 class JaegerDeployment(ComponentResource):
 
-    def __init__(self, certmanager: CertManager, opts: ResourceOptions = None):
+    def __init__(self,
+                 certmanager: CertManager,
+                 ingress: Ingress,
+                 opts: ResourceOptions = None):
         super().__init__('abyss:component:Jaeger', 'jaeger', {}, opts)
 
-        # Jaeger operator defaults to the "observability" namespace, so make
-        # sure it exists.
+        volumes = [
+            make_volume(f'abyss-jaegger-es-{volume}', '6Gi', 'abyss-jaeger-es',
+                        ResourceOptions(parent=self))
+            for volume in range(0, 3)
+        ]
 
-        namespace = Namespace("observability",
-                              opts=ResourceOptions(parent=self))
-
-        pulumi.export('obs-ns', namespace.id)
+        chart_deps = [certmanager, ingress]
+        chart_deps.extend(volumes)
 
         chart = Chart(
             'jaeger',
@@ -41,11 +46,26 @@ class JaegerDeployment(ComponentResource):
                 values={
                     'provisionDataStore': {
                         'cassandra': False,
-                        'elasticsearch': False,
+                        'elasticsearch': True,
                         'kafka': False,
                     },
                     'storage': {
-                        'type': 'memory',
+                        'type': 'elasticsearch',
+                    },
+                    'elasticsearch': {
+                        'sysctlInitContainer': {
+                            'enabled': False,
+                        },
+                        'volumeClaimTemplate': {
+                            'resources': {
+                                'requests': {
+                                    'storage': '5Gi'
+                                }
+                            },
+                            'storageClassName': 'abyss-jaeger-es',
+                        },
+                        # Disable hard anti-affinity because we want to run on just 1 node for dev
+                        'antiAffinity': 'soft',
                     },
                     'allInOne': {
                         'enabled': False,
@@ -58,6 +78,13 @@ class JaegerDeployment(ComponentResource):
                         'ingress': {
                             'enabled': False,
                         },
+                        'service': {
+                            'otlp': {
+                                'grpc': {
+                                    'port': 4317
+                                }
+                            }
+                        }
                     },
                     'query': {
                         'enabled': True,
@@ -72,10 +99,10 @@ class JaegerDeployment(ComponentResource):
                         },
                     },
                 },
-            ),
-            opts=ResourceOptions(parent=self, depends_on=[
-                namespace,
-            ]),
+                transformations=[
+                    # set_sc,
+                ]),
+            opts=ResourceOptions(parent=self, depends_on=chart_deps),
         )
 
         query_svc = chart.get_resource('v1/Service', 'jaeger-query')

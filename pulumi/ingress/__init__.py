@@ -73,5 +73,5 @@ class Ingress(ComponentResource):
             controller=ControllerArgs(
                 publish_service=ControllerPublishServiceArgs(
                     enabled=True, ), ),
-            opts=ResourceOptions(parent=self),
+            opts=ResourceOptions(parent=self, depends_on=[lb]),
         )
