@@ -4,6 +4,7 @@ import pulumi
 import pulumi_kafka
 from config import is_minikube
 from database import Database
+from ingress import Ingress
 from kafka import Kafka
 from observability import JaegerDeployment
 from pulumi import ResourceOptions
@@ -11,7 +12,7 @@ from pulumi_kafka import Topic
 from pulumi_kubernetes_cert_manager import CertManager
 
 # Make sure we can see what's happening
-# ingress = Ingress()
+ingress = Ingress()
 certmanager = CertManager('cert-manager', install_crds=True)
 JaegerDeployment(certmanager)
 

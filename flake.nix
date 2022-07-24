@@ -35,6 +35,7 @@
             # Pulumi
             python-pkg
             pulumi-bin
+            crd2pulumi
 
             # Rust development
             (fenix.packages.${system}.stable.withComponents [

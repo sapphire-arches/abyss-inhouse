@@ -61,10 +61,13 @@ class JaegerDeployment(ComponentResource):
                     'query': {
                         'enabled': True,
                         'ingress': {
-                            'enabled': False,
+                            'enabled': True,
                             'hosts': [
                                 'jaeger.cluster.local',
                             ],
+                            'annotations': {
+                                'kubernetes.io/ingress.class': 'nginx'
+                            },
                         },
                     },
                 },
@@ -76,3 +79,7 @@ class JaegerDeployment(ComponentResource):
                 ]
             ),
         )
+
+        query_svc = chart.get_resource('v1/Service', 'jaeger-query')
+
+        pulumi.export('jaeger-host', query_svc.spec.cluster_ip)
