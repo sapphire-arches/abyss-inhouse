@@ -19,6 +19,11 @@
           overlays = [
             fenix.overlay
           ];
+          config = {
+            allowUnfreePredicate = pkg: builtins.elem (pkg.pname) [
+              "ngrok"
+            ];
+          };
         };
         python-pkg = pkgs.python310.withPackages (pythonPackages: with pythonPackages; [
           isort
@@ -38,6 +43,10 @@
             python-pkg
             pulumi-bin
             crd2pulumi
+
+            # Bot development (js)
+            nodejs
+            ngrok
 
             # Rust development
             (fenix.packages.${system}.stable.withComponents [

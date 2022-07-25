@@ -1,2 +1,4 @@
 config:
+  abyss-inhouse:discord-token:
+    secure: AAABAKyUsp97RBgOU2SzZUpHvmpVBNVA/popRGYvMgqaygLn0wCLXHzlX52+u9fVG1Zcs+YwCSFJy14JbVLSMLkmvjMWO2Wo1EOfX4kWaZr+CRdW8Je8itfGQRxC5ML/PUP/60tQkv0=
   abyss-inhouse:isMinikube: "true"
