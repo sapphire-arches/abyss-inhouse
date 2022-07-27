@@ -12,7 +12,7 @@ from pulumi_kubernetes.helm.v3 import Chart
 from pulumi_kubernetes.helm.v3 import ChartOpts
 from pulumi_kubernetes.helm.v3 import FetchOpts
 
-from storage import StorageSlice
+from .storage import StorageSlice
 
 
 class Kafka(ComponentResource):

@@ -13,7 +13,7 @@ from pulumi_kubernetes.helm.v3 import ChartOpts
 from pulumi_kubernetes.helm.v3 import FetchOpts
 from pulumi_random import RandomPassword
 
-from storage import StorageSlice
+from .storage import StorageSlice
 
 
 class Database(ComponentResource):
@@ -29,9 +29,8 @@ class Database(ComponentResource):
                              opts=ResourceOptions(parent=self))
 
         self.postgres_password = RandomPassword(
-            name, length=16, opts=ResourceOptions(parent=self)).result
-
-        pulumi.export('postgres-password', self.postgres_password)
+            name, length=16, special=False,
+            opts=ResourceOptions(parent=self)).result
 
         secret = Secret(
             name,
@@ -57,11 +56,28 @@ class Database(ComponentResource):
                             "existingClaim": slice.helm_claim(),
                         }
                     },
+                    "image": {
+                        "debug": True,
+                    },
                     "auth": {
                         "existingSecret":
                         secret.id.apply(lambda id: id[id.find('/') + 1:]),
                     }
                 }),
             opts=ResourceOptions(parent=self, depends_on=[slice]))
+
+        namespace = None
+        if hasattr(chart, 'namespace'):
+            namespace = chart.namespace
+        else:
+            namespace = 'default'
+
+        service = chart.get_resource(
+            'v1/Service', Output.concat(namespace, '/', name, '-postgresql'))
+
+        pulumi.export('postgres-password', self.postgres_password)
+        pulumi.export('postgres-host', service.spec.cluster_ip)
+        # TODO: can this change?
+        pulumi.export('postgres-port', 5432)
 
         self.register_outputs({'postgress_password': self.postgres_password})

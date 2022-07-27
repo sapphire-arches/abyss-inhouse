@@ -13,8 +13,8 @@ from pulumi_kubernetes.helm.v3 import FetchOpts
 from pulumi_kubernetes.yaml import ConfigFile
 from pulumi_kubernetes_cert_manager import CertManager
 
-from ingress import Ingress
-from storage import make_volume
+from .ingress import Ingress
+from .storage import make_volume
 
 
 class JaegerDeployment(ComponentResource):
