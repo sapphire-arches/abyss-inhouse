@@ -4,6 +4,9 @@ from discord.utils import get
 import os
 import random
 import string
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 bot = commands.Bot(command_prefix='.')
 
@@ -172,6 +175,6 @@ async def make_channel(ctx):
     channel = await guild.create_text_channel('secret', overwrites=overwrites)
 
 try:
-    bot.run(os.getenv('TOKEN'))
+    bot.run(os.getenv('DISCORD_TOKEN'))
 except:
     os.system("kill 1")

@@ -1,0 +1,46 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: abyss
+  name: abyss-bot
+  labels:
+    app.kubernetes.io/name: abyss-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: abyss-bot
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: abyss-bot
+    spec:
+      containers:
+        - name: coredns
+          image: "192.168.1.18:5000/abyss/discord-bot:latest"
+          resources:
+            limits:
+              memory: 100Mi
+            requests:
+              memory: 10Mi
+              cpu: 100m
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            readOnlyRootFilesystem: true
+          env:
+            - name: DISCORD_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: abyss-bot-token
+                  key: TOKEN
+                  optional: false
+      dnsPolicy: Default
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
