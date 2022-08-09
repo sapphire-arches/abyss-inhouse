@@ -22,13 +22,18 @@
           config = {
             allowUnfreePredicate = pkg: builtins.elem (pkg.pname) [
               "ngrok"
+              "awscli"
             ];
           };
         };
         python-pkg = pkgs.python310.withPackages (pythonPackages: with pythonPackages; [
+          # Python tooling
           isort
           mypy
           yapf
+
+          # Postgresql connector
+          pgcli
         ]);
       in
       {
@@ -43,6 +48,8 @@
             python-pkg
             pulumi-bin
             crd2pulumi
+            awscli2
+            kubernetes-helm
 
             # Bot development (js)
             nodejs

@@ -30,7 +30,7 @@ def get_local_path(name):
     assert (pulumi.get_stack() == 'dev')
 
     local_path = pathlib.Path(__file__)
-    database_path = local_path.parent.parent.absolute().joinpath(
+    database_path = local_path.parent.parent.parent.absolute().joinpath(
         'pv').joinpath(name)
 
     if not pulumi.runtime.is_dry_run():

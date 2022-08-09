@@ -63,8 +63,8 @@ app.post('/interactions', async function(req, res) {
   return await tracer.startActiveSpan('discord.interaction',
     {
       attributes: {
-        type: type,
-        id: id,
+        'discord.type': type,
+        'discord.id': id,
       }
     }, async (span) => {
       var result: APIInteractionResponse | null = null;
@@ -78,7 +78,7 @@ app.post('/interactions', async function(req, res) {
         }
 
         if (type === InteractionType.MESSAGE_COMPONENT) {
-          // TODO
+          throw new Error("Unsupported interaction type: MESSAGE_COMPONENT");
         }
 
         res.send(result);

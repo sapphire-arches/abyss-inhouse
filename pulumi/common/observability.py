@@ -13,26 +13,23 @@ from pulumi_kubernetes.helm.v3 import FetchOpts
 from pulumi_kubernetes.yaml import ConfigFile
 from pulumi_kubernetes_cert_manager import CertManager
 
-from .ingress import Ingress
-from .storage import make_volume
-
 
 class JaegerDeployment(ComponentResource):
 
     def __init__(self,
                  certmanager: CertManager,
-                 ingress: Ingress,
+                 ingress,
+                 deploy_elastic: bool,
                  opts: ResourceOptions = None):
         super().__init__('abyss:component:Jaeger', 'jaeger', {}, opts)
 
-        volumes = [
-            make_volume(f'abyss-jaegger-es-{volume}', '6Gi', 'abyss-jaeger-es',
-                        ResourceOptions(parent=self))
-            for volume in range(0, 3)
-        ]
-
+        """
         chart_deps = [certmanager, ingress]
-        chart_deps.extend(volumes)
+        if deploy_elastic:
+            from dev.storage import make_volume
+            for volume in range(0, 3):
+                volume = make_volume(f'abyss-jaegger-es-{volume}', '6Gi', 'abyss-jaeger-es', ResourceOptions(parent=self))
+                chart_deps.append(volume)
 
         chart = Chart(
             'jaeger',
@@ -46,7 +43,7 @@ class JaegerDeployment(ComponentResource):
                 values={
                     'provisionDataStore': {
                         'cassandra': False,
-                        'elasticsearch': True,
+                        'elasticsearch': deploy_elastic,
                         'kafka': False,
                     },
                     'storage': {
@@ -71,7 +68,7 @@ class JaegerDeployment(ComponentResource):
                         'enabled': False,
                     },
                     'agent': {
-                        'enabled': True,
+                        'enabled': False,
                     },
                     'collector': {
                         'enabled': True,
@@ -108,3 +105,4 @@ class JaegerDeployment(ComponentResource):
         query_svc = chart.get_resource('v1/Service', 'jaeger-query')
 
         pulumi.export('jaeger-host', query_svc.spec.cluster_ip)
+        """
