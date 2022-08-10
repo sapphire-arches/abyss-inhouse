@@ -34,6 +34,9 @@
 
           # Postgresql connector
           pgcli
+
+          # Virtualenv
+          virtualenv
         ]);
       in
       {
