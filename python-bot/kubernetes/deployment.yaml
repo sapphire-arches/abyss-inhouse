@@ -17,7 +17,7 @@ spec:
         app.kubernetes.io/name: abyss-bot
     spec:
       containers:
-        - name: coredns
+        - name: abyss-bot
           image: "192.168.1.18:5000/abyss/discord-bot:latest"
           resources:
             limits:

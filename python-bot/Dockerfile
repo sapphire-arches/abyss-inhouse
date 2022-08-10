@@ -4,9 +4,6 @@ WORKDIR /opt/apps/abyss-bot
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
-COPY run.sh .
-RUN chmod 755 run.sh
-
-ENTRYPOINT ["./run.sh"]
+ENTRYPOINT ["python3", "-u", "bot.py"]
 
 COPY bot.py .

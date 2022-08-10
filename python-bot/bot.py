@@ -1,14 +1,21 @@
-import discord
+from discord import app_commands
 from discord.ext import commands
 from discord.utils import get
-from discord import app_commands
+import asyncio
+import discord
+import logging
 import os
 import random
+import signal
 import string
-import logging
-import asyncio
+
+#===============================================================================
+# Logger setup
+#===============================================================================
 
 logging.basicConfig(level=logging.INFO)
+logging.getLogger('asyncio').setLevel(logging.INFO)
+
 logger = logging.getLogger('abyss-bot')
 logger.setLevel(level=logging.INFO)
 
@@ -251,8 +258,25 @@ async def restart_abyss(interaction: discord.Interaction):
         content="The Abyss has been restarted."
     )
 
-try:
-    client.run(os.getenv('DISCORD_TOKEN'))
-except Exception as e:
-    logger.error('Bot exploded', exc_info=e)
-    os.system("kill 1")
+#===============================================================================
+# asyncio loop execution
+#===============================================================================
+async def main():
+    token = os.getenv('DISCORD_TOKEN')
+    if token is None or len(token) == 0:
+        logger.error('Missing DISCORD_TOKEN in the environment')
+
+    loop = asyncio.get_running_loop()
+
+    def sigterm_to_keyboardint():
+        raise KeyboardInterrupt("SIGTERM recieved")
+
+    loop.add_signal_handler(signal.SIGTERM, sigterm_to_keyboardint)
+
+    try:
+        await client.login(token)
+        await client.connect()
+    except Exception as e:
+        logger.error('Bot exploded', exc_info=e)
+
+asyncio.run(main())
