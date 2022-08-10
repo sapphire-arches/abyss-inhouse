@@ -25,7 +25,9 @@ logger.setLevel(level=logging.INFO)
 
 # Guild hard-coded to abyss-dev for now
 MY_GUILD = discord.Object(id=1000819141596414002)
-INHOUSE_CHANNEL_ID =1000819141596414005
+INHOUSE_CHANNEL_ID = 1000819141596414005
+ROLES_CHANNEL_ID = 1006837412787388457
+ROLES_MESSAGE_ID = 1006837453870608435
 
 # Mapping from internal name to whatever the guild actually names the roles
 ROLE_NAMES = {
@@ -71,6 +73,11 @@ async def on_ready():
     logger.info(f'Logged in as {client.user} (ID: {client.user.id})')
     client.guild = client.get_guild(MY_GUILD.id)
     client.channel = client.guild.get_channel(INHOUSE_CHANNEL_ID)
+
+    react_channel = client.guild.get_channel(ROLES_CHANNEL_ID)
+    react_message = await react_channel.fetch_message(ROLES_MESSAGE_ID)
+    for react in react_message.reactions:
+        logger.info(f'React message reaction: {react.emoji} {react.count} times')
 
 #===============================================================================
 # Commands
