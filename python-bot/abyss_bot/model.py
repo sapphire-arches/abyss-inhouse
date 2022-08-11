@@ -1,4 +1,4 @@
-from sqlalchemy import MetaData, Table, Column, Integer, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import *
 from sqlalchemy.orm import relationship, declarative_base
 
 META = MetaData()
@@ -10,7 +10,7 @@ class User(Base):
     # Internal ID number
     id = Column(Integer, primary_key=True)
     # Discord Snowflake ID
-    discord_id = Column(Integer)
+    discord_id = Column(BigInteger)
     # Discord username
     discord_username = Column(String)
     # Whether the user is currently subscribed
@@ -22,6 +22,10 @@ class User(Base):
 
     # Relationship for looking up the queue entry for this user
     queue_entry = relationship('QueueEntry', back_populates='user')
+
+    __table_args__ = (
+        UniqueConstraint('discord_id'),
+    )
 
     def __repr__(self):
         return f'User(id={self.id!r}, discord_id={self.discord_id!r}, discord_username={self.discord_username!r}, subscriber={self.subscriber!r}, vip={self.vip!r}, bot_admin={self.bot_admin!r})'

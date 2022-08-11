@@ -38,7 +38,13 @@ spec:
                   name: abyss-bot-token
                   key: TOKEN
                   optional: false
-      dnsPolicy: Default
+            - name: DB_CLIENT_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: abyss-bot-token
+                  key: DB_CLIENT_STRING
+                  optional: false
+      dnsPolicy: ClusterFirst
       nodeSelector:
         kubernetes.io/os: linux
       tolerations:
