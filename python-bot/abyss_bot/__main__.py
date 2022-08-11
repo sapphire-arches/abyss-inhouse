@@ -78,7 +78,6 @@ clear_queue_stmt = sa.delete(model.QueueEntry)
 # TODO: persist this to postgresql
 #===============================================================================
 
-
 TeamCompV = 0
 TeamCompS = 5
 TeamCompNS = 0
@@ -171,115 +170,6 @@ async def list_abyss(interaction: discord.Interaction):
         content=str,
         ephemeral=True
     )
-
-@client.tree.command(
-    description='Make random teams'
-)
-async def make_teams(interaction: discord.Interaction):
-    # TODO: restrict this to only people with the "Abyss Inhouse Admin" role
-    TeamOne = randomTeam()
-    TeamTwo = randomTeam()
-    await client.channel.send("Team 1: " + ', '.join(TeamOne))
-    await client.channel.send("Team 2: " + ', '.join(TeamTwo))
-
-def randomTeam():
-    Team = []
-    global QueueNonSub
-    global Queue
-    global QueueVIP
-
-    if int(TeamCompNS) > 0 :
-        NSList = random.sample(QueueNonSub, int(TeamCompNS))
-        Team.extend(NSList)
-        copyNSQueue = QueueNonSub.copy()
-        QueueNonSub.clear()
-        QueueNonSub = [x for x in copyNSQueue if x not in NSList]
-    if int(TeamCompS) > 0 :
-        SubList = random.sample(Queue, int(TeamCompS))
-        Team.extend(SubList)
-        copySubQueue = Queue.copy()
-        Queue.clear()
-        Queue = [x for x in copySubQueue if x not in SubList]
-    if int(TeamCompV) > 0 :
-        VIPList = random.sample(QueueVIP, int(TeamCompV))
-        Team.extend(VIPList)
-        copyVIPQueue = QueueVIP.copy()
-        QueueVIP.clear()
-        QueueVIP = [x for x in copyVIPQueue if x not in VIPList]
-
-    return Team
-
-@client.tree.command(
-    description='Set the team composition'
-)
-@app_commands.describe(
-    vip_count='The number of VIPs per team',
-    sub_count='The number of subscribers per team',
-    nonsub_count='The number of non-subscribers per team',
-)
-async def set_team_comp(interaction: discord.Interaction, vip_count: int, sub_count: int, nonsub_count: int):
-    # TODO: restrict this to "Abyss Admin" roles only
-    global TeamCompV
-    global TeamCompS
-    global TeamCompNS
-    TeamCompV = vip_count
-    TeamCompS = sub_count
-    TeamCompNS = nonsub_count
-    await interaction.response.send_message(
-        content="Team comp set to VIPs:" + TeamCompV + " Subs:" + TeamCompS + " NonSubs:" + TeamCompNS
-    )
-
-@client.tree.command(
-    description='Create an ephemeral channel for sharing the lobby password'
-)
-async def create_lobby(interaction: discord.Interaction):
-    # TODO: Send the password to the admins first (in an admin channel?), then
-    # create the ephemeral channel and add the users from the queue to it
-    # TODO: wire up role creation/assignment for the games
-    await interaction.response.defer(thinking=True)
-    guild = client.guild
-    #admin_role = get(guild.roles, name="Admin")
-    #await guild.create_role(name="AbyssGame")
-    # AG_role = get(guild.roles, name="AbyssGame")
-    #overwrites = {
-    #    guild.default_role: discord.PermissionOverwrite(read_messages=False),
-    #    AG_role: discord.PermissionOverwrite(read_messages=True),
-    #    admin_role: discord.PermissionOverwrite(read_messages=True)
-    #}
-    channel = await guild.create_text_channel('abyss_lobby')
-    await channel.send("Lobby Name: The Abyss")
-    await channel.send("Lobby Password: " + ''.join(random.choices(string.ascii_lowercase, k=8)))
-
-    channel = await guild.create_voice_channel("abyss_DIRE")
-    channel = await guild.create_voice_channel("abyss_RADIANT")
-
-    await interaction.followup.send(
-        content='Created epehemeral channels for lobby',
-    )
-
-@client.tree.command(
-    description='Delete the ephemeral lobby channels'
-)
-async def delete_lobby(interaction: discord.Interaction):
-    await interaction.response.defer(thinking=True)
-
-    guild = client.guild
-
-    async def delete_channel(channel):
-        channel = discord.utils.get(guild.channels, name=channel)
-        if channel is not None:
-            channel.delete()
-            await interaction.followup.send(f'Deleted ephemeral channel {channel}')
-        else:
-            await interaction.followup.send(f'Failed to delet channel {channel}, is it already deleted?')
-
-    await asyncio.gather(
-        delete_channel('abyss_lobby'),
-        delete_channel('abyss_RADIANT'),
-        delete_channel('abyss_DIRE'),
-    )
-
-    await interaction.followup.send('Deleted all channels and roles')
 
 @client.tree.command(
     description='Clear all queues'
