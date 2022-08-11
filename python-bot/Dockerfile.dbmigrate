@@ -7,6 +7,8 @@ WORKDIR /opt/apps/abyss-bot
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
-ENTRYPOINT ["python3", "-u", "-m", "abyss_bot"]
+ENTRYPOINT ["alembic", "upgrade", "head"]
 
+COPY alembic.ini alembic.ini
+COPY alembic alembic
 COPY abyss_bot abyss_bot

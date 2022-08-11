@@ -1,4 +1,6 @@
 from logging.config import fileConfig
+import os
+import sys
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
@@ -14,11 +16,14 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+DB_URL = os.getenv('DB_CLIENT_STRING')
+if DB_URL is None:
+    sys.exit(1)
+
 # add your model's MetaData object here
 # for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = None
+from abyss_bot import model
+target_metadata = model.Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -38,7 +43,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = DB_URL
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -61,6 +66,7 @@ def run_migrations_online() -> None:
         config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        url=DB_URL,
     )
 
     with connectable.connect() as connection:

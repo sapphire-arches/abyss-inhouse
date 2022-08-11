@@ -1,0 +1,21 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: abyss
+  name: upgrade-schema
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      containers:
+        - name: alembic
+          image: "192.168.1.18:5000/abyss/db-migrate:latest"
+          env:
+            - name: DB_CLIENT_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: abyss-bot-token
+                  key: DB_CLIENT_STRING
+                  optional: false
+      restartPolicy: Never
