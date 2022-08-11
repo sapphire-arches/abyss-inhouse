@@ -1,1 +1,3 @@
+SQLAlchemy==1.4.40
+alembic==1.8.1
 discord.py @ https://github.com/Rapptz/discord.py/archive/11278d55e80fb7b1e928ce95b2eff32a1b4e0596.zip
