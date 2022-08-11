@@ -152,7 +152,8 @@ async def join_abyss(interaction: discord.Interaction):
         except sa.exc.IntegrityError:
             session.rollback()
             await interaction.response.send_message(
-                content="You're already in the queue for today!"
+                content="You're already in the queue for today!",
+                ephemeral=True
             )
 
 @client.tree.command(
