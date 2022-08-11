@@ -272,6 +272,7 @@ async def main():
     token = os.getenv('DISCORD_TOKEN')
     if token is None or len(token) == 0:
         logger.error('Missing DISCORD_TOKEN in the environment')
+        return
 
     loop = asyncio.get_running_loop()
 
