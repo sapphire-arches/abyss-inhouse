@@ -4,6 +4,6 @@ WORKDIR /opt/apps/abyss-bot
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
-ENTRYPOINT ["python3", "-u", "bot.py"]
+ENTRYPOINT ["python3", "-u", "-m", "abyss-bot"]
 
-COPY bot.py .
+COPY abyss-bot abyss-bot
