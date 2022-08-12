@@ -32,7 +32,10 @@ logger.setLevel(level=logging.INFO)
 #===============================================================================
 
 # Guild hard-coded to abyss-dev for now
-MY_GUILD = discord.Object(id=1000819141596414002)
+GUILDS = [
+    1000819141596414002, # abyss-dev
+    909167831302680617, # Twitch Stuff
+]
 INHOUSE_CHANNEL_ID = 1000819141596414005
 ROLES_CHANNEL_ID = 1006837412787388457
 ROLES_MESSAGE_ID = 1006837453870608435
@@ -53,8 +56,10 @@ class AbyssClient(discord.Client):
         self.tree = discord.app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        self.tree.copy_global_to(guild=MY_GUILD)
-        await self.tree.sync(guild=MY_GUILD)
+        for guild in GUILDS:
+            guild=discord.Object(id=guild)
+            self.tree.copy_global_to(guild=guild)
+            await self.tree.sync(guild=guild)
 
 intents = discord.Intents.default()
 client = AbyssClient(intents=intents)
@@ -92,13 +97,6 @@ TeamCompNS = 0
 @client.event
 async def on_ready():
     logger.info(f'Logged in as {client.user} (ID: {client.user.id})')
-    client.guild = client.get_guild(MY_GUILD.id)
-    client.channel = client.guild.get_channel(INHOUSE_CHANNEL_ID)
-
-    react_channel = client.guild.get_channel(ROLES_CHANNEL_ID)
-    react_message = await react_channel.fetch_message(ROLES_MESSAGE_ID)
-    for react in react_message.reactions:
-        logger.info(f'React message reaction: {react.emoji} {react.count} times')
 
 #===============================================================================
 # Commands
