@@ -72,8 +72,10 @@ get_queue_stmt = (sa
         model.QueueEntry.enroll_time,
     ))
 
-clear_queue_stmt = sa.delete(model.QueueEntry)
-
+clear_queue_stmt = (sa
+    .update(model.QueueEntry)
+    .where(model.QueueEntry.serviced == False)
+    .values(serviced=True))
 
 #===============================================================================
 # global state
@@ -191,6 +193,33 @@ async def list_abyss(interaction: discord.Interaction):
         content=str,
         ephemeral=True
     )
+
+@client.tree.command(
+    description='Pop an entry from the queue'
+)
+async def pop(interaction: discord.Interaction, user: discord.User):
+    with client.sm.begin() as session:
+        statement = (sa
+            .select(model.QueueEntry)
+            .join(model.QueueEntry.user)
+            .filter(model.User.discord_id == user.id)
+            .filter(model.QueueEntry.serviced == False))
+
+        serviced = False
+        for entry in session.execute(statement).scalars().all():
+            serviced = True
+            entry.serviced = True
+
+    if serviced:
+        await interaction.response.send_message(
+            content=f'Removed {user.name} from the queue',
+            ephemeral=True
+        )
+    else:
+        await interaction.response.send_message(
+            content=f'{user.name} appears to not be in the queue',
+            ephemeral=True
+        )
 
 @client.tree.command(
     description='Clear all queues'
