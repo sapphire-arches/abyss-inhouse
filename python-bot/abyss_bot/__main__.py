@@ -183,6 +183,9 @@ async def list_abyss(interaction: discord.Interaction):
         queue = session.execute(get_queue_stmt).all()
         for (i, (qe, user)) in enumerate(queue):
             str += f'{i+1} (entry {qe.id}). {user.discord_username}\n'
+            if len(str) > 1500:
+                str += '\n ... and more'
+                break
 
     await interaction.response.send_message(
         content=str,
