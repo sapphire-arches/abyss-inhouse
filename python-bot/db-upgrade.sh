@@ -5,11 +5,24 @@ set -euo pipefail
 stale_job=$(kubectl -n abyss get job upgrade-schema --no-headers 2>/dev/null || true)
 
 if [[ ! -z "${stale_job}" ]]; then
-  echo '[-] Stale job, please run:'
-  echo '  kubectl -n abyss delete job upgrade-schema'
-  echo '[-] and rerun this script'
+  while true; do
+    read -r -p "[-] Stale job, do you want to delete it? [y/n] " input
 
-  exit 1
+    case $input in
+      [yY]*)
+        kubectl -n abyss delete job upgrade-schema
+        break;
+        ;;
+      [nN]*)
+        echo '[-] Please run:'
+        echo '  kubectl -n abyss delete job upgrade-schema'
+        echo '[-] and rerun this script'
+        exit 1
+        ;;
+      *)
+        echo '[-] Please enter yes or no'
+    esac
+  done
 fi
 
 set -x
