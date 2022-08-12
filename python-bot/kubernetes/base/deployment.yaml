@@ -2,7 +2,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  namespace: abyss
   name: abyss-bot
   labels:
     app.kubernetes.io/name: abyss-bot

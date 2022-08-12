@@ -2,7 +2,9 @@
 
 set -euo pipefail
 
-stale_job=$(kubectl -n abyss get job upgrade-schema --no-headers 2>/dev/null || true)
+namespace=${1:-abyss-dev}
+
+stale_job=$(kubectl -n ${namespace} get job upgrade-schema --no-headers 2>/dev/null || true)
 
 if [[ ! -z "${stale_job}" ]]; then
   while true; do
@@ -29,4 +31,4 @@ set -x
 
 docker build . -f Dockerfile.dbmigrate -t registry.registry.cakesoft.local:5000/abyss/db-migrate:latest
 docker push registry.registry.cakesoft.local:5000/abyss/db-migrate:latest
-kubectl create -f ./kubernetes/upgrade-alembic.yaml
+kubectl create -n ${namespace} -f ./kubernetes/upgrade-alembic.yaml
