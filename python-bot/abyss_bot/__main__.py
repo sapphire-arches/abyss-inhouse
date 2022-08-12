@@ -64,10 +64,12 @@ client = AbyssClient(intents=intents)
 #===============================================================================
 get_queue_stmt = (sa
     .select(model.QueueEntry, model.User)
+    .filter_by(serviced=False)
     .join(model.QueueEntry.user)
     .order_by(
         model.User.vip,
         model.User.subscriber,
+        model.QueueEntry.enroll_time,
     ))
 
 clear_queue_stmt = sa.delete(model.QueueEntry)
@@ -135,14 +137,25 @@ async def join_abyss(interaction: discord.Interaction):
         # Make sure the user is up to date
         session.flush()
 
-        queue_entry = model.QueueEntry(
-            user_id=db_user.id,
-            enroll_time=sa.sql.functions.now()
-        )
+        queue_entry = session.execute(
+            sa.select(model.QueueEntry)
+                .filter_by(user_id=db_user.id, serviced=False)
+                .order_by(model.QueueEntry.enroll_time.asc())
+                .limit(1)
+        ).scalar_one_or_none()
 
-        session.add(
-            queue_entry
-        )
+        if queue_entry is None:
+            queue_entry = model.QueueEntry(
+                user_id=db_user.id,
+                enroll_time=sa.sql.functions.now(),
+                serviced=False,
+            )
+            session.add(queue_entry)
+        else:
+            await interaction.response.send_message(
+                content="You're already in the queue for today!",
+                ephemeral=True
+            )
 
         try:
             session.commit()
@@ -155,6 +168,10 @@ async def join_abyss(interaction: discord.Interaction):
                 content="You're already in the queue for today!",
                 ephemeral=True
             )
+        except discord.errors.InteractionResponded:
+            # We probably already sent some sort of error message
+            session.rollback()
+            pass
 
 @client.tree.command(
     description='View the current queue for the abyss'
@@ -165,7 +182,7 @@ async def list_abyss(interaction: discord.Interaction):
     with client.sm.begin() as session:
         queue = session.execute(get_queue_stmt).all()
         for (i, (qe, user)) in enumerate(queue):
-            str += f'{i+1}. {user.discord_username}\n'
+            str += f'{i+1} (entry {qe.id}). {user.discord_username}\n'
 
     await interaction.response.send_message(
         content=str,

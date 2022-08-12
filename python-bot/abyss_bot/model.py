@@ -40,6 +40,8 @@ class QueueEntry(Base):
     user_id = Column(Integer, ForeignKey('users.id'), unique=True)
     # Time at which this entry in the queue was created
     enroll_time = Column(DateTime)
+    # Whether this queue entry has been used
+    serviced = Column(Boolean, default=False, nullable=False)
 
     user = relationship('User', back_populates='queue_entry')
 
