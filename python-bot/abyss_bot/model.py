@@ -14,11 +14,11 @@ class User(Base):
     # Discord username
     discord_username = Column(String)
     # Whether the user is currently subscribed
-    subscriber = Column(Boolean)
+    subscriber = Column(Boolean, nullable=False)
     # Whether the user is a VIP
-    vip = Column(Boolean)
+    vip = Column(Boolean, nullable=False)
     # Whether the user is a bot admin
-    bot_admin = Column(Boolean)
+    bot_admin = Column(Boolean, nullable=False)
 
     # Relationship for looking up the queue entry for this user
     queue_entry = relationship('QueueEntry', back_populates='user')
