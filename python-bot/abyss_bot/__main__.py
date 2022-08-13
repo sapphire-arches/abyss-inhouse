@@ -153,6 +153,12 @@ async def on_ready():
     logger.info(f'Logged in as {client.user} (ID: {client.user.id})')
 
 #===============================================================================
+# utilities
+#===============================================================================
+def get_db_user(session, user):
+    return session.execute(sa.select(model.User).filter_by(discord_id=user.id)).scalar_one_or_none()
+
+#===============================================================================
 # Commands
 #===============================================================================
 
@@ -170,7 +176,7 @@ async def join_abyss(interaction: discord.Interaction):
 
     with client.sm.begin() as session:
         try:
-            db_user = session.execute(sa.select(model.User).filter_by(discord_id=user.id)).scalar_one_or_none()
+            db_user = get_db_user(session, user)
 
             if db_user is None:
                 db_user = model.User(
@@ -296,6 +302,15 @@ async def list_skrub(interaction: discord.Interaction):
 )
 async def pop(interaction: discord.Interaction, user: discord.User):
     with client.sm.begin() as session:
+        db_user = get_db_user(session, interaction.user)
+
+        if db_user is None or not db_user.bot_admin:
+            await interaction.response.send_message(
+                content=f'You are not authorized to remove people from the queue',
+                ephemeral=True
+            )
+            return
+
         statement = (sa
             .select(model.QueueEntry)
             .join(model.QueueEntry.user)
@@ -323,6 +338,14 @@ async def pop(interaction: discord.Interaction, user: discord.User):
 )
 async def restart_abyss(interaction: discord.Interaction):
     with client.sm.begin() as session:
+        db_user = get_db_user(session, interaction.user)
+
+        if db_user is None or not db_user.bot_admin:
+            await interaction.response.send_message(
+                content=f'You are not authorized to clear the queue',
+                ephemeral=True
+            )
+            return
         session.execute(clear_queue_stmt)
 
     await interaction.response.send_message(
