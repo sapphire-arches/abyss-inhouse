@@ -240,6 +240,20 @@ async def join_abyss(interaction: discord.Interaction):
             session.rollback()
             pass
 
+def render_list(it):
+    str = ''
+    for (i, (qe, user)) in enumerate(it):
+        str += f'{i+1}. <@{user.discord_id}>'
+
+        if user.subscriber:
+            str += ' (sub)'
+        str += '\n'
+
+        if len(str) > 1500:
+            str += '\n ... and more'
+            break
+    return str
+
 @client.tree.command(
     description='View the current queue for the abyss'
 )
@@ -248,16 +262,7 @@ async def list_abyss(interaction: discord.Interaction):
 
     with client.sm.begin() as session:
         queue = session.execute(get_queue_stmt).all()
-        for (i, (qe, user)) in enumerate(queue):
-            str += f'{i+1}. {user.discord_username}'
-
-            if user.subscriber:
-                str += ' (sub)'
-            str += '\n'
-
-            if len(str) > 1500:
-                str += '\n ... and more'
-                break
+        str += render_list(queue)
 
     await interaction.response.send_message(
         content=str,
@@ -279,16 +284,7 @@ async def list_skrub(interaction: discord.Interaction):
 
         logger.info('Constructing scrub string')
 
-        for (i, (qe, user)) in enumerate(queue):
-            str += f'{i+1}. {user.discord_username}'
-
-            if user.subscriber:
-                str += ' (sub)'
-            str += '\n'
-
-            if len(str) > 1500:
-                str += '\n ... and more'
-                break
+        str += render_list(queue)
 
     await interaction.response.send_message(
         content=str,
