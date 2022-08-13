@@ -265,6 +265,42 @@ async def list_abyss(interaction: discord.Interaction):
     )
 
 @client.tree.command(
+    description='List the queue starting from non-subscribers'
+)
+async def list_skrub(interaction: discord.Interaction):
+    str = 'Abyss inhouse skrub queue\n>>> '
+
+    logger.info('list scrub called')
+
+    with client.sm.begin() as session:
+        try:
+            logger.info('Query for scrubs')
+            queue = session.execute(get_queue_stmt.filter(
+                model.User.vip == False,
+                model.User.subscriber == False
+            )).all()
+
+            logger.info('Constructing scrub string')
+
+            for (i, (qe, user)) in enumerate(queue):
+                str += f'{i+1}. {user.discord_username}'
+
+                if user.subscriber:
+                    str += ' (sub)'
+                str += '\n'
+
+                if len(str) > 1500:
+                    str += '\n ... and more'
+                    break
+        except Exception as e:
+            logger.error('Failed to list scrubs', exc_info=e)
+
+    await interaction.response.send_message(
+        content=str,
+        ephemeral=True
+    )
+
+@client.tree.command(
     description='Pop an entry from the queue'
 )
 async def pop(interaction: discord.Interaction, user: discord.User):
@@ -314,9 +350,11 @@ def get_env(name):
     return val
 
 async def main():
+    logging.info('Begin bot startup')
     token = get_env('DISCORD_TOKEN')
     db_client_string = get_env('DB_CLIENT_STRING')
 
+    logging.info('SQLAlchemy engine construction')
     client.engine = sa.create_engine(db_client_string, future=True)
     client.sm = sessionmaker(client.engine, future=True)
 
@@ -328,7 +366,9 @@ async def main():
     loop.add_signal_handler(signal.SIGTERM, sigterm_to_keyboardint)
 
     try:
+        logging.info('Bot login')
         await client.login(token)
+        logging.info('Bot boot')
         await client.connect()
     except Exception as e:
         logger.error('Bot exploded', exc_info=e)
