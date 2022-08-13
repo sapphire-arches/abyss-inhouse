@@ -126,9 +126,9 @@ get_queue_stmt = (sa
     .filter_by(serviced=False)
     .join(model.QueueEntry.user)
     .order_by(
-        model.User.vip,
-        model.User.subscriber,
-        model.QueueEntry.enroll_time,
+        model.User.vip.desc(),
+        model.User.subscriber.desc(),
+        model.QueueEntry.enroll_time.asc(),
     ))
 
 clear_queue_stmt = (sa
@@ -169,47 +169,60 @@ async def join_abyss(interaction: discord.Interaction):
     role_sub = None
 
     with client.sm.begin() as session:
-        db_user = session.execute(sa.select(model.User).filter_by(discord_id=user.id)).scalar_one_or_none()
+        try:
+            db_user = session.execute(sa.select(model.User).filter_by(discord_id=user.id)).scalar_one_or_none()
 
-        if db_user is None:
-            db_user = model.User(
-                discord_id=user.id,
-            )
-            session.add(db_user)
+            if db_user is None:
+                db_user = model.User(
+                    discord_id=user.id,
+                )
+                session.add(db_user)
 
-        db_user.discord_username = user.name
+            db_user.discord_username = user.name
 
-        for role in interaction.guild.roles:
-            if role.name == ROLE_NAMES['VIP']:
-                role_vip = role
-            elif role.name == ROLE_NAMES['SUB']:
-                role_sub = role
+            for role in interaction.guild.roles:
+                if role.name == ROLE_NAMES['VIP']:
+                    role_vip = role
+                elif 'SUB' in role.name.upper():
+                    role_sub = role
 
-        db_user.vip = user.get_role(role_vip.id) is not None
-        db_user.subscriber = user.get_role(role_sub.id) is not None
+            if role_vip is not None:
+                logging.warning('No VIP role found!')
+                db_user.vip = user.get_role(role_vip.id) is not None
+            else:
+                db_user.vip = False
 
-        # Make sure the user is up to date
-        session.flush()
+            if role_sub is not None:
+                logging.warning('No SUB role found!')
+                db_user.subscriber = user.get_role(role_sub.id) is not None
+            else:
+                db_user.subscriber = False
 
-        queue_entry = session.execute(
-            sa.select(model.QueueEntry)
-                .filter_by(user_id=db_user.id, serviced=False)
-                .order_by(model.QueueEntry.enroll_time.asc())
-                .limit(1)
-        ).scalar_one_or_none()
+            # Make sure the user is up to date
+            session.flush()
 
-        if queue_entry is None:
-            queue_entry = model.QueueEntry(
-                user_id=db_user.id,
-                enroll_time=sa.sql.functions.now(),
-                serviced=False,
-            )
-            session.add(queue_entry)
-        else:
-            await interaction.response.send_message(
-                content="You're already in the queue for today!",
-                ephemeral=True
-            )
+            queue_entry = session.execute(
+                sa.select(model.QueueEntry)
+                    .filter_by(user_id=db_user.id, serviced=False)
+                    .order_by(model.QueueEntry.enroll_time.asc())
+                    .limit(1)
+            ).scalar_one_or_none()
+
+            if queue_entry is None:
+                queue_entry = model.QueueEntry(
+                    user_id=db_user.id,
+                    enroll_time=sa.sql.functions.now(),
+                    serviced=False,
+                )
+                session.add(queue_entry)
+            else:
+                await interaction.response.send_message(
+                    content="You're already in the queue for today!",
+                    ephemeral=True
+                )
+        except Exception as e:
+            logging.error(f'Failed to load users', exc_info=e)
+            raise e
 
         try:
             session.commit()
@@ -236,7 +249,12 @@ async def list_abyss(interaction: discord.Interaction):
     with client.sm.begin() as session:
         queue = session.execute(get_queue_stmt).all()
         for (i, (qe, user)) in enumerate(queue):
-            str += f'{i+1} (entry {qe.id}). {user.discord_username}\n'
+            str += f'{i+1}. {user.discord_username}'
+
+            if user.subscriber:
+                str += ' (sub)'
+            str += '\n'
+
             if len(str) > 1500:
                 str += '\n ... and more'
                 break
