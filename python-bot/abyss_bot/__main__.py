@@ -233,7 +233,7 @@ async def join_abyss(interaction: discord.Interaction):
         try:
             session.commit()
             await interaction.response.send_message(
-                content=f'Added {user.name} to the queue. Use /list_abyss to see the current queue'
+                content=f'Added <@{user.id}> to the queue. Use /list_abyss to see the current queue'
             )
         except sa.exc.IntegrityError:
             session.rollback()
