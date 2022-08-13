@@ -270,30 +270,25 @@ async def list_abyss(interaction: discord.Interaction):
 async def list_skrub(interaction: discord.Interaction):
     str = 'Abyss inhouse skrub queue\n>>> '
 
-    logger.info('list scrub called')
-
     with client.sm.begin() as session:
-        try:
-            logger.info('Query for scrubs')
-            queue = session.execute(get_queue_stmt.filter(
-                model.User.vip == False,
-                model.User.subscriber == False
-            )).all()
+        logger.info('Query for scrubs')
+        queue = session.execute(get_queue_stmt.filter(
+            model.User.vip == False,
+            model.User.subscriber == False
+        )).all()
 
-            logger.info('Constructing scrub string')
+        logger.info('Constructing scrub string')
 
-            for (i, (qe, user)) in enumerate(queue):
-                str += f'{i+1}. {user.discord_username}'
+        for (i, (qe, user)) in enumerate(queue):
+            str += f'{i+1}. {user.discord_username}'
 
-                if user.subscriber:
-                    str += ' (sub)'
-                str += '\n'
+            if user.subscriber:
+                str += ' (sub)'
+            str += '\n'
 
-                if len(str) > 1500:
-                    str += '\n ... and more'
-                    break
-        except Exception as e:
-            logger.error('Failed to list scrubs', exc_info=e)
+            if len(str) > 1500:
+                str += '\n ... and more'
+                break
 
     await interaction.response.send_message(
         content=str,
