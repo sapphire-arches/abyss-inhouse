@@ -4,46 +4,98 @@ from discord.utils import get
 import asyncio
 import discord
 import logging
+import logging.config
 import os
 import random
 import signal
 import string
 import sqlalchemy as sa
+from configparser import ConfigParser
 from sqlalchemy.orm import sessionmaker
 
 from . import model
 
 #===============================================================================
+# Config loading
+#===============================================================================
+logging.basicConfig(level=logging.DEBUG)
+
+config = ConfigParser()
+config.read([
+    '/config/bot.config',
+    '/config/override.config',
+])
+
+#===============================================================================
 # Logger setup
 #===============================================================================
+LOG_LEVELS = {
+    "CRITICAL": 50,
+    "ERROR": 40,
+    "WARNING": 30,
+    "INFO": 20,
+    "DEBUG": 10,
+    "NOTSET": 0,
+}
 
-logging.basicConfig(level=logging.INFO)
-logging.getLogger('asyncio').setLevel(logging.INFO)
-logging.getLogger('sqlalchemy.dialects').setLevel(logging.INFO)
-logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
-logging.getLogger('sqlalchemy.orm').setLevel(logging.INFO)
-logging.getLogger('sqlalchemy.pool').setLevel(logging.INFO)
+def setup_logging(cfg):
+    LOGMOD = 'logging.mod.'
+    base_level = LOG_LEVELS[cfg.get('logging', 'root_level')]
+    fmt = cfg.get('logging', 'format', raw=True)
 
-logger = logging.getLogger('abyss-bot')
-logger.setLevel(level=logging.INFO)
+    # Initialize loggers with the root configuration
+    loggers = {
+        '': {
+            'handlers': ['default'],
+            'level': base_level,
+            'propagate': False
+        }
+    }
+
+    for section in cfg.sections():
+        if not section.startswith(LOGMOD):
+            continue
+        module = section[len(LOGMOD):]
+        logging.info(f'Load level for module {module}')
+        loggers[module] = {
+            'level': LOG_LEVELS[cfg[section]['level']],
+            'handlers': ['default'],
+            'propagate': False
+        }
+
+    logging.config.dictConfig({
+        'version': 1,
+        'disable_existing_loggers': True,
+        'loggers': loggers,
+        'handlers': {
+            'default': {
+                'level': 'DEBUG',
+                'formatter': 'default',
+                'class': 'logging.StreamHandler',
+                'stream': 'ext://sys.stdout',
+            }
+        },
+        'formatters': {
+            'default': {
+                'format': fmt
+            }
+        }
+    })
+
+setup_logging(config)
+
+logger = logging.getLogger(__name__)
 
 #===============================================================================
-# Config
+# Guild config
 #===============================================================================
 
-# Guild hard-coded to abyss-dev for now
-GUILDS = [
-    1000819141596414002, # abyss-dev
-    909167831302680617, # Twitch Stuff
-]
-INHOUSE_CHANNEL_ID = 1000819141596414005
-ROLES_CHANNEL_ID = 1006837412787388457
-ROLES_MESSAGE_ID = 1006837453870608435
+BIND_GUILD = config.get('guild', 'id', fallback=None)
 
 # Mapping from internal name to whatever the guild actually names the roles
 ROLE_NAMES = {
-    'VIP': 'VIP',
-    'SUB': 'SUB',
+    'VIP': config.get('guild', 'role.vip', fallback='VIP'),
+    'SUB': config.get('guild', 'role.sub', fallback='SUB'),
 }
 
 #===============================================================================
@@ -56,10 +108,12 @@ class AbyssClient(discord.Client):
         self.tree = discord.app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        for guild in GUILDS:
-            guild=discord.Object(id=guild)
+        if BIND_GUILD is not None:
+            guild = discord.Object(id=int(BIND_GUILD))
             self.tree.copy_global_to(guild=guild)
             await self.tree.sync(guild=guild)
+        else:
+            await self.tree.sync()
 
 intents = discord.Intents.default()
 client = AbyssClient(intents=intents)

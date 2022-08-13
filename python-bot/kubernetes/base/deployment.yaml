@@ -43,6 +43,19 @@ spec:
                   name: abyss-bot-token
                   key: DB_CLIENT_STRING
                   optional: false
+          volumeMounts:
+            - name : "config"
+              mountPath: "/config"
+              readOnly: True
+      volumes:
+        - name: "config"
+          configMap:
+            name: "bot-config"
+            items:
+              - key: "bot.config"
+                path: "bot.config"
+              - key: "override.config"
+                path: "override.config"
       dnsPolicy: ClusterFirst
       nodeSelector:
         kubernetes.io/os: linux

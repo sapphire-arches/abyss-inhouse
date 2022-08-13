@@ -5,4 +5,7 @@ commonLabels:
   app.kubernetes.io/name: abyss-bot
 resources:
   - deployment.yaml
-
+configMapGenerator:
+  - name: bot-config
+    files:
+      - bot.config
