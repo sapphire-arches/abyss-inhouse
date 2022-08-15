@@ -4,93 +4,23 @@ from discord.utils import get
 import asyncio
 import discord
 import logging
-import logging.config
 import os
 import random
 import signal
 import string
 import sqlalchemy as sa
-from configparser import ConfigParser
 from sqlalchemy.orm import sessionmaker
 
 from . import model
-
-#===============================================================================
-# Config loading
-#===============================================================================
-logging.basicConfig(level=logging.DEBUG)
-
-config = ConfigParser()
-config.read([
-    '/config/bot.config',
-    '/config/override.config',
-])
-
-#===============================================================================
-# Logger setup
-#===============================================================================
-LOG_LEVELS = {
-    "CRITICAL": 50,
-    "ERROR": 40,
-    "WARNING": 30,
-    "INFO": 20,
-    "DEBUG": 10,
-    "NOTSET": 0,
-}
-
-def setup_logging(cfg):
-    LOGMOD = 'logging.mod.'
-    base_level = LOG_LEVELS[cfg.get('logging', 'root_level')]
-    fmt = cfg.get('logging', 'format', raw=True)
-
-    # Initialize loggers with the root configuration
-    loggers = {
-        '': {
-            'handlers': ['default'],
-            'level': base_level,
-            'propagate': False
-        }
-    }
-
-    for section in cfg.sections():
-        if not section.startswith(LOGMOD):
-            continue
-        module = section[len(LOGMOD):]
-        logging.info(f'Load level for module {module}')
-        loggers[module] = {
-            'level': LOG_LEVELS[cfg[section]['level']],
-            'handlers': ['default'],
-            'propagate': False
-        }
-
-    logging.config.dictConfig({
-        'version': 1,
-        'disable_existing_loggers': True,
-        'loggers': loggers,
-        'handlers': {
-            'default': {
-                'level': 'DEBUG',
-                'formatter': 'default',
-                'class': 'logging.StreamHandler',
-                'stream': 'ext://sys.stdout',
-            }
-        },
-        'formatters': {
-            'default': {
-                'format': fmt
-            }
-        }
-    })
-
-setup_logging(config)
+from . import views
+from .client import AbyssClient
+from .config import config
 
 logger = logging.getLogger(__name__)
 
 #===============================================================================
 # Guild config
 #===============================================================================
-
-BIND_GUILD = config.get('guild', 'id', fallback=None)
 
 # Mapping from internal name to whatever the guild actually names the roles
 ROLE_NAMES = {
@@ -101,19 +31,6 @@ ROLE_NAMES = {
 #===============================================================================
 # Client definition
 #===============================================================================
-class AbyssClient(discord.Client):
-    def __init__(self, *, intents: discord.Intents):
-        super().__init__(intents=intents)
-
-        self.tree = discord.app_commands.CommandTree(self)
-
-    async def setup_hook(self):
-        if BIND_GUILD is not None:
-            guild = discord.Object(id=int(BIND_GUILD))
-            self.tree.copy_global_to(guild=guild)
-            await self.tree.sync(guild=guild)
-        else:
-            await self.tree.sync()
 
 intents = discord.Intents.default()
 client = AbyssClient(intents=intents)
@@ -121,16 +38,6 @@ client = AbyssClient(intents=intents)
 #===============================================================================
 # Handy queries
 #===============================================================================
-get_queue_stmt = (sa
-    .select(model.QueueEntry, model.User)
-    .filter_by(serviced=False)
-    .join(model.QueueEntry.user)
-    .order_by(
-        model.User.vip.desc(),
-        model.User.subscriber.desc(),
-        model.QueueEntry.enroll_time.asc(),
-    ))
-
 clear_queue_stmt = (sa
     .update(model.QueueEntry)
     .where(model.QueueEntry.serviced == False)
@@ -194,9 +101,10 @@ async def join_abyss(interaction: discord.Interaction):
 
             if role_vip is not None:
                 logging.warning('No VIP role found!')
-                db_user.vip = user.get_role(role_vip.id) is not None
+                db_user.vip |= user.get_role(role_vip.id) is not None
             else:
-                db_user.vip = False
+                # VIPs are manually tagged if there is no VIP role
+                pass
 
             if role_sub is not None:
                 logging.warning('No SUB role found!')
@@ -248,54 +156,18 @@ async def join_abyss(interaction: discord.Interaction):
 
 def render_list(it):
     str = ''
-    for (i, (qe, user)) in enumerate(it):
-        str += f'{i+1}. <@{user.discord_id}>'
-
-        if user.subscriber:
-            str += ' (sub)'
-        str += '\n'
-
-        if len(str) > 1500:
-            str += '\n ... and more'
-            break
-    return str
 
 @client.tree.command(
     description='View the current queue for the abyss'
 )
 async def list_abyss(interaction: discord.Interaction):
-    str = 'Abyss inhouse queue:\n>>> '
-
-    with client.sm.begin() as session:
-        queue = session.execute(get_queue_stmt).all()
-        str += render_list(queue)
-
-    await interaction.response.send_message(
-        content=str,
-        ephemeral=True
-    )
+    await views.respond_with_view(client, interaction, False)
 
 @client.tree.command(
     description='List the queue starting from non-subscribers'
 )
 async def list_skrub(interaction: discord.Interaction):
-    str = 'Abyss inhouse skrub queue\n>>> '
-
-    with client.sm.begin() as session:
-        logger.info('Query for scrubs')
-        queue = session.execute(get_queue_stmt.filter(
-            model.User.vip == False,
-            model.User.subscriber == False
-        )).all()
-
-        logger.info('Constructing scrub string')
-
-        str += render_list(queue)
-
-    await interaction.response.send_message(
-        content=str,
-        ephemeral=True
-    )
+    await views.respond_with_view(client, interaction, True)
 
 @client.tree.command(
     description='Pop an entry from the queue'
