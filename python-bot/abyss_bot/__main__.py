@@ -15,6 +15,7 @@ from . import model
 from . import views
 from .client import AbyssClient
 from .config import config
+from .model import get_db_user
 
 logger = logging.getLogger(__name__)
 
@@ -58,12 +59,6 @@ TeamCompNS = 0
 @client.event
 async def on_ready():
     logger.info(f'Logged in as {client.user} (ID: {client.user.id})')
-
-#===============================================================================
-# utilities
-#===============================================================================
-def get_db_user(session, user):
-    return session.execute(sa.select(model.User).filter_by(discord_id=user.id)).scalar_one_or_none()
 
 #===============================================================================
 # Commands
@@ -224,6 +219,10 @@ async def restart_abyss(interaction: discord.Interaction):
         content="The Abyss has been restarted."
     )
 
+
+from . import game
+client.tree.add_command(game.GAME)
+
 #===============================================================================
 # asyncio loop execution
 #===============================================================================
@@ -256,6 +255,10 @@ async def main():
         await client.login(token)
         logging.info('Bot boot')
         await client.connect()
+
+        # TODO: in parallel, we should kick off a process that pings the DB
+        # every ~60 seconds and reconiles the DB and discord states (instead of
+        # add-hoc sub role sync / game channel management).
     except Exception as e:
         logger.error('Bot exploded', exc_info=e)
 

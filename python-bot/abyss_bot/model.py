@@ -1,3 +1,4 @@
+import discord
 from sqlalchemy import *
 from sqlalchemy.orm import relationship, declarative_base
 
@@ -55,6 +56,9 @@ class Game(Base):
     # Primary identifier for this actual game
     id = Column(Integer, primary_key=True)
 
+    # Dota2 game ID
+    dota2_match_id = Column(Integer)
+
     players = relationship('GamePlayer', back_populates='game')
 
 class GamePlayer(Base):
@@ -67,7 +71,18 @@ class GamePlayer(Base):
     game_id = Column(Integer, ForeignKey('game.id'), nullable=False)
     # User that played in the game
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    # Whether the user has been removed from the game
+    removed = Column(Boolean, default=False, server_default='FALSE', nullable=False)
 
     game = relationship('Game', back_populates='players')
 
     user = relationship('User', back_populates='games')
+
+#===============================================================================
+# utilities
+#===============================================================================
+def get_db_user(session, user: discord.User):
+    """ Get a DB user from a discord.User object """
+    return session.execute(
+        select(User).filter_by(discord_id=user.id)
+    ).scalar_one_or_none()
