@@ -12,7 +12,7 @@ if [[ ! -z "${stale_job}" ]]; then
 
     case $input in
       [yY]*)
-        kubectl -n abyss delete job upgrade-schema
+        kubectl -n ${namespace} delete job upgrade-schema
         break;
         ;;
       [nN]*)
