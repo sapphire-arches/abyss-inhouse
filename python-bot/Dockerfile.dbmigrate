@@ -8,6 +8,9 @@ COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
 ENTRYPOINT ["alembic", "upgrade", "head"]
+# Hack entrypoint: useful for kubectl exec into the environment and
+#   alembic revision --autogenerate
+# ENTRYPOINT ["sleep", "1200"]
 
 COPY alembic.ini alembic.ini
 COPY alembic alembic

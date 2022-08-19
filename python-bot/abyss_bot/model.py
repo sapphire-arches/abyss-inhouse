@@ -1,7 +1,6 @@
 from sqlalchemy import *
 from sqlalchemy.orm import relationship, declarative_base
 
-META = MetaData()
 Base = declarative_base()
 
 class User(Base):
@@ -22,6 +21,8 @@ class User(Base):
 
     # Relationship for looking up the queue entry for this user
     queue_entry = relationship('QueueEntry', back_populates='user')
+
+    games = relationship('GamePlayer', back_populates='user')
 
     __table_args__ = (
         UniqueConstraint('discord_id'),
@@ -47,3 +48,26 @@ class QueueEntry(Base):
 
     def __repr__(self):
         return f'QueueEntry(id={self.id!r}, user_id={self.user_id!r}, enroll_time={self.enroll_time!r})'
+
+class Game(Base):
+    __tablename__ = 'game'
+
+    # Primary identifier for this actual game
+    id = Column(Integer, primary_key=True)
+
+    players = relationship('GamePlayer', back_populates='game')
+
+class GamePlayer(Base):
+    __tablename__ = 'game_player'
+
+    # ID for this player in a particular game
+    id = Column(Integer, primary_key=True)
+
+    # Game the user played in
+    game_id = Column(Integer, ForeignKey('game.id'), nullable=False)
+    # User that played in the game
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+
+    game = relationship('Game', back_populates='players')
+
+    user = relationship('User', back_populates='games')
