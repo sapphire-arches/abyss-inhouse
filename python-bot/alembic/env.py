@@ -18,6 +18,7 @@ if config.config_file_name is not None:
 
 DB_URL = os.getenv('DB_CLIENT_STRING')
 if DB_URL is None:
+    print('No DB URL provided')
     sys.exit(1)
 
 # add your model's MetaData object here
