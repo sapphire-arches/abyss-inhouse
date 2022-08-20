@@ -44,6 +44,8 @@ class QueueEntry(Base):
     enroll_time = Column(DateTime)
     # Whether this queue entry has been used
     serviced = Column(Boolean, default=False, nullable=False)
+    # Whether the player is ready or not
+    ready = Column(Boolean, default=True, nullable=False)
 
     user = relationship('User', back_populates='queue_entry')
 

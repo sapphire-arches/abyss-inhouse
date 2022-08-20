@@ -149,8 +149,77 @@ async def join_abyss(interaction: discord.Interaction):
             session.rollback()
             pass
 
-def render_list(it):
-    str = ''
+def entries_for_user(session, user: discord.User):
+    return session.execute(
+        sa.select(model.QueueEntry)
+            .join(model.QueueEntry.user)
+            .filter(model.User.discord_id == user.id)
+            .filter(model.QueueEntry.serviced == False)
+    ).scalars().all()
+
+@client.tree.command(
+    description='Leave the queue'
+)
+async def leave(interaction: discord.Interaction):
+    serviced = False
+    with interaction.client.sm.begin() as session:
+        for entry in entries_for_user(session, interaction.user):
+            serviced = True
+            entry.serviced = True
+
+    if serviced:
+        await interaction.response.send_message(
+            content='You have left the queue',
+            ephemeral=True
+        )
+    else:
+        await interaction.response.send_message(
+            content='You were not in the queue!',
+            ephemeral=True
+        )
+
+@client.tree.command(
+    description='Mark self as unready'
+)
+async def ready(interaction: discord.Interaction):
+    marked = False
+    with interaction.client.sm.begin() as session:
+        for entry in entries_for_user(session, interaction.user):
+            marked = True
+            entry.ready = True
+
+    if marked:
+        await interaction.response.send_message(
+            content='Marked you ready',
+            ephemeral=True
+        )
+    else:
+        await interaction.response.send_message(
+            content='You were not in the queue!',
+            ephemeral=True
+        )
+
+
+@client.tree.command(
+    description='Mark self as unready'
+)
+async def unready(interaction: discord.Interaction):
+    marked = False
+    with interaction.client.sm.begin() as session:
+        for entry in entries_for_user(session, interaction.user):
+            marked = True
+            entry.ready = False
+
+    if marked:
+        await interaction.response.send_message(
+            content='Marked you unready',
+            ephemeral=True
+        )
+    else:
+        await interaction.response.send_message(
+            content='You were not in the queue!',
+            ephemeral=True
+        )
 
 @client.tree.command(
     description='View the current queue for the abyss'

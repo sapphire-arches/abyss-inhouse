@@ -13,6 +13,7 @@ class QueueView(discord.ui.View):
         .filter_by(serviced=False)
         .join(model.QueueEntry.user)
         .order_by(
+            model.QueueEntry.ready.desc(),
             model.User.vip.desc(),
             model.User.subscriber.desc(),
             model.QueueEntry.enroll_time.asc(),
@@ -50,6 +51,8 @@ class QueueView(discord.ui.View):
                     str += ' (sub)'
                 if user.vip:
                     str += ' (vip)'
+                if not qe.ready:
+                    str += ' (UNREADY!)'
                 str += '\n'
 
                 if len(str) > 1500:
