@@ -49,6 +49,8 @@ async def add(interaction: discord.Interaction, user: discord.User):
 
     did_add = False
 
+    guild = interaction.guild
+
     with interaction.client.sm.begin() as session:
         current_game = get_current_game(session)
 
@@ -80,6 +82,23 @@ async def add(interaction: discord.Interaction, user: discord.User):
         if player.removed:
             did_add = True
 
+        member = guild.get_member(user.id)
+        if member is None:
+            member = await guild.fetch_member(user.id)
+
+        if current_game.role_id is not None:
+            role = discord.Object(id=current_game.role_id)
+            await member.add_roles(role)
+
+        if current_game.channel_id is not None:
+            channel = guild.get_channel(current_game.channel_id)
+            if channel is None:
+                channel = await guild.fetch_channel(current_game.channel_id)
+            await channel.send(
+                content=f'Hi <@{user.id}>, welcome to the game!',
+            )
+
+
         player.removed = False
 
         session.add(player)
@@ -110,6 +129,7 @@ async def remove(interaction: discord.Interaction, user: discord.User):
             sa.select(model.GamePlayer)
                 .join(model.User)
                 .filter(model.User.discord_id == user.id)
+                .filter(model.GamePlayer.game_id == current_game.id)
         ).scalar_one_or_none()
 
         if player is None:
@@ -130,6 +150,18 @@ async def remove(interaction: discord.Interaction, user: discord.User):
                 content=f'<@{user.id}> removed from the current game',
                 ephemeral=True,
             )
+
+            guild = interaction.guild
+            member = guild.get_member(user.id)
+            if member is None:
+                member = await guild.fetch_member(user.id)
+            role = guild.get_role(current_game.role_id)
+
+            try:
+                await member.remove_roles(role)
+            except Exception as e:
+                logger.warn('Failed to remove role {role.id} from {member.id}', exc_info = e)
+
 
 current_users_query = (
         sa.select(model.User)
@@ -190,6 +222,19 @@ async def start(interaction: discord.Interaction):
         # TODO: things may explode messily from here on out, and we should
         # clean up the role in that case
 
+        # Create the channel
+        channel = await guild.create_text_channel(
+            name=f'abyss-game-{current_game.id}',
+            overwrites={
+                guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                role: discord.PermissionOverwrite(read_messages=True),
+                client.user: discord.PermissionOverwrite(
+                    read_messages=True,
+                    manage_channels=True,
+                ),
+            },
+        )
+
         for user in users:
             member = guild.get_member(user.discord_id)
             if member is None:
@@ -203,23 +248,8 @@ async def start(interaction: discord.Interaction):
             logger.info(f'Adding user {user.discord_id} to role {role.id}')
 
             await member.add_roles(role)
-
-        # Create the channel
-        channel = await guild.create_text_channel(
-            name=f'abyss-game-{current_game.id}',
-            overwrites={
-                guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                role: discord.PermissionOverwrite(read_messages=True),
-                client.user: discord.PermissionOverwrite(
-                    read_messages=True,
-                    manage_channels=True,
-                ),
-            },
-        )
-        for member in role.members:
-            await channel.create_invite(
-                reason='In a game that started',
-                max_age=0,
+            await channel.send(
+                content=f'Hi <@{member.id}>, welcome to the game'
             )
 
         current_game.role_id = role.id
