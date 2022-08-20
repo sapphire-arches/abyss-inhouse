@@ -301,16 +301,33 @@ async def complete(interaction: discord.Interaction, match_id: int):
 
         current_game.dota2_match_id = match_id
 
-        role = guild.get_role(current_game.role_id)
-        if role is not None:
-            await role.delete(reason='Game complete')
+        # Clean up discord resources
+        try:
+            role = guild.get_role(current_game.role_id)
+            if role is not None:
+                await role.delete(reason='Game complete')
+        except discord.NotFound:
+            pass
 
-        channel = guild.get_channel(current_game.channel_id)
-        if channel is None:
-            channel = await guild.fetch_channel(current_game.channel_id)
+        try:
+            channel = guild.get_channel(current_game.channel_id)
+            if channel is None:
+                channel = await guild.fetch_channel(current_game.channel_id)
 
-        if channel is not None:
-            await channel.delete(reason='Game complete')
+            if channel is not None:
+                await channel.delete(reason='Game complete')
+        except discord.NotFound:
+            pass
+
+        # Remove users that were in the queue at the time of game completion
+        # from the queue
+
+        session.execute(
+            model.QueueEntry.__table__.update()
+                .where(model.GamePlayer.user_id == model.QueueEntry.user_id)
+                .where(model.GamePlayer.game_id == current_game.id)
+                .values(serviced=True)
+        )
 
         next_game = model.Game()
         session.add(next_game)
