@@ -52,6 +52,13 @@ async def add(interaction: discord.Interaction, user: discord.User):
     guild = interaction.guild
 
     with interaction.client.sm.begin() as session:
+        if not interaction_is_admin(interaction, session):
+            await interaction.response.send_message(
+                content='Only bot admins can use this commnd',
+                ephemeral=True
+            )
+            return
+
         current_game = get_current_game(session)
 
         player = session.execute(
@@ -123,6 +130,12 @@ async def remove(interaction: discord.Interaction, user: discord.User):
     logger.info(f'Should remove {user.id} from a game')
 
     with interaction.client.sm.begin() as session:
+        if not interaction_is_admin(interaction, session):
+            await interaction.response.send_message(
+                content='Only bot admins can use this commnd',
+                ephemeral=True
+            )
+
         current_game = get_current_game(session)
 
         player = session.execute(
@@ -203,6 +216,13 @@ async def start(interaction: discord.Interaction):
     client = interaction.client
 
     with client.sm.begin() as session:
+        if not interaction_is_admin(interaction, session):
+            await interaction.response.send_message(
+                content='Only bot admins can use this commnd',
+                ephemeral=True
+            )
+            return
+
         current_game = get_current_game(session)
 
         users = session.execute(
@@ -270,6 +290,13 @@ async def complete(interaction: discord.Interaction, match_id: int):
     guild = interaction.guild
 
     with interaction.client.sm.begin() as session:
+        if not interaction_is_admin(interaction, session):
+            await interaction.response.send_message(
+                content='Only bot admins can use this commnd',
+                ephemeral=True
+            )
+            return
+
         current_game = get_current_game(session)
 
         current_game.dota2_match_id = match_id
@@ -292,3 +319,8 @@ async def complete(interaction: discord.Interaction, match_id: int):
         content=f'Marked game as complete with Dota2 MatchID {match_id}',
         ephemeral=True,
     )
+
+def interaction_is_admin(interaction: discord.Interaction, session):
+    db_user = model.get_db_user(session, interaction.user)
+
+    return db_user.bot_admin
