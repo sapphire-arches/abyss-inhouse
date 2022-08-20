@@ -10,7 +10,7 @@ import logging
 
 from . import model
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 class Game(app_commands.Group):
     """ Game management commands
@@ -55,6 +55,7 @@ async def add(interaction: discord.Interaction, user: discord.User):
             sa.select(model.GamePlayer)
                 .join(model.User)
                 .filter(model.User.discord_id == user.id)
+                .filter(model.GamePlayer.game_id == current_game.id)
         ).scalar_one_or_none()
 
         if player is None:
@@ -165,18 +166,40 @@ async def start(interaction: discord.Interaction):
     # TODO: create game channel + role, and add all players to it
     player_str = ''
 
+    guild = interaction.guild
+
     with interaction.client.sm.begin() as session:
         current_game = get_current_game(session)
 
-        players = session.execute(
+        users = session.execute(
             current_users_query
                 .filter(model.GamePlayer.game_id == current_game.id)
         ).scalars().all()
 
         player_str = ','.join(map(
             lambda u: f'<@{u.discord_id}>',
-            players
+            users
         ))
+
+        role = await guild.create_role(
+            name=f'Abyss Game {current_game.id}',
+        )
+
+        for user in users:
+            member = guild.get_member(user.discord_id)
+            if member is None:
+                logger.info(f'User {user.discord_id} not in cache, attempting fetch')
+                member = await guild.fetch_member(user.discord_id)
+
+            if member is None:
+                logger.warn(f'Can not add {user.discord_id} to role {role.id}, not found in guild')
+                continue
+
+            logger.info(f'Adding user {user.discord_id} to role {role.id}')
+
+            await member.add_roles(role)
+
+        current_game.role_id = role.id
 
 
     await interaction.response.send_message(
@@ -194,6 +217,11 @@ async def complete(interaction: discord.Interaction, match_id: int):
         current_game = get_current_game(session)
 
         current_game.dota2_match_id = match_id
+
+        role = interaction.guild.get_role(current_game.role_id)
+
+        await role.delete()
+
         next_game = model.Game()
         session.add(next_game)
 

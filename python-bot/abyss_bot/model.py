@@ -56,6 +56,9 @@ class Game(Base):
     # Primary identifier for this actual game
     id = Column(Integer, primary_key=True)
 
+    # Role managed for this game
+    role_id = Column(BigInteger)
+
     # Dota2 game ID
     dota2_match_id = Column(Integer)
 

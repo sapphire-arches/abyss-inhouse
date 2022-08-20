@@ -13,7 +13,8 @@ BIND_GUILD = config.get('guild', 'id', fallback=None)
 #===============================================================================
 
 class AbyssClient(discord.Client):
-    def __init__(self, *, intents: discord.Intents):
+    def __init__(self, *, intents):
+        intents = discord.Intents.default()
         super().__init__(intents=intents)
 
         self.tree = discord.app_commands.CommandTree(self)
