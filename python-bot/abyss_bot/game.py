@@ -30,6 +30,7 @@ def get_current_game(session):
     current_game = session.execute(
         sa.select(model.Game)
             .order_by(model.Game.id.desc())
+            .filter(model.Game.dota2_match_id == None)
             .limit(1)
     ).scalar_one_or_none()
 
@@ -167,8 +168,9 @@ async def start(interaction: discord.Interaction):
     player_str = ''
 
     guild = interaction.guild
+    client = interaction.client
 
-    with interaction.client.sm.begin() as session:
+    with client.sm.begin() as session:
         current_game = get_current_game(session)
 
         users = session.execute(
@@ -185,6 +187,9 @@ async def start(interaction: discord.Interaction):
             name=f'Abyss Game {current_game.id}',
         )
 
+        # TODO: things may explode messily from here on out, and we should
+        # clean up the role in that case
+
         for user in users:
             member = guild.get_member(user.discord_id)
             if member is None:
@@ -199,7 +204,26 @@ async def start(interaction: discord.Interaction):
 
             await member.add_roles(role)
 
+        # Create the channel
+        channel = await guild.create_text_channel(
+            name=f'abyss-game-{current_game.id}',
+            overwrites={
+                guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                role: discord.PermissionOverwrite(read_messages=True),
+                client.user: discord.PermissionOverwrite(
+                    read_messages=True,
+                    manage_channels=True,
+                ),
+            },
+        )
+        for member in role.members:
+            await channel.create_invite(
+                reason='In a game that started',
+                max_age=0,
+            )
+
         current_game.role_id = role.id
+        current_game.channel_id = channel.id
 
 
     await interaction.response.send_message(
@@ -213,14 +237,23 @@ async def start(interaction: discord.Interaction):
 async def complete(interaction: discord.Interaction, match_id: int):
     logger.info(f'Marking game as complete')
 
+    guild = interaction.guild
+
     with interaction.client.sm.begin() as session:
         current_game = get_current_game(session)
 
         current_game.dota2_match_id = match_id
 
-        role = interaction.guild.get_role(current_game.role_id)
+        role = guild.get_role(current_game.role_id)
+        if role is not None:
+            await role.delete(reason='Game complete')
 
-        await role.delete()
+        channel = guild.get_channel(current_game.channel_id)
+        if channel is None:
+            channel = await guild.fetch_channel(current_game.channel_id)
+
+        if channel is not None:
+            await channel.delete(reason='Game complete')
 
         next_game = model.Game()
         session.add(next_game)

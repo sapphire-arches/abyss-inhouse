@@ -59,6 +59,9 @@ class Game(Base):
     # Role managed for this game
     role_id = Column(BigInteger)
 
+    # Channel managed for this game
+    channel_id = Column(BigInteger)
+
     # Dota2 game ID
     dota2_match_id = Column(Integer)
 
