@@ -179,7 +179,7 @@ async def leave(interaction: discord.Interaction):
         )
 
 @client.tree.command(
-    description='Mark self as unready'
+    description='Mark self as ready'
 )
 async def ready(interaction: discord.Interaction):
     marked = False
