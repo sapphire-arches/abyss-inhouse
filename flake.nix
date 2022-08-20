@@ -52,6 +52,10 @@
             pulumi-bin
             crd2pulumi
             awscli2
+
+            # Kubernetes
+            kubectl
+            docker
             kubernetes-helm
 
             # Bot development (js)
