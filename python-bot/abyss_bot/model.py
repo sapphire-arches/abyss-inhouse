@@ -16,7 +16,7 @@ class User(Base):
     # Whether the user is currently subscribed
     subscriber = Column(Boolean, nullable=False)
     # Whether the user is a VIP
-    vip = Column(Boolean, nullable=False)
+    vip = Column(Boolean, default=False, nullable=False)
     # Whether the user is a bot admin
     bot_admin = Column(Boolean, default=False, nullable=False)
 
