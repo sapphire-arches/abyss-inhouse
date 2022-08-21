@@ -325,6 +325,7 @@ async def complete(interaction: discord.Interaction, match_id: int):
         session.execute(
             model.QueueEntry.__table__.update()
                 .where(model.GamePlayer.user_id == model.QueueEntry.user_id)
+                .where(model.GamePlayer.removed == False)
                 .where(model.GamePlayer.game_id == current_game.id)
                 .values(serviced=True)
         )
