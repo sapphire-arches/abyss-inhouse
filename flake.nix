@@ -70,6 +70,10 @@
               "rustfmt"
             ])
             fenix.packages.${system}.rust-analyzer
+
+            # Java tooling
+            maven
+            maven.jdk
           ];
 
           shellHook = ''
